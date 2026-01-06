@@ -1,16 +1,19 @@
 use clap::Parser;
+use kitlog::process_log_file;
+use std::path;
+use std::process;
 
-/// Print log files using kitty text-sizing protocol.
 #[derive(Parser)]
+#[command(author, version, about, long_about = None)]
 struct Cli {
-    /// The path to the file to read
-    path: std::path::PathBuf,
+    path: path::PathBuf,
 }
 
 fn main() {
     let args = Cli::parse();
-    let content = std::fs::read_to_string(&args.path).expect("could not read file");
-    for line in content.lines() {
-        print!("\x1b]66;s=2;{}\x07\n\n", line);
+
+    if let Err(e) = process_log_file(&args.path) {
+        eprintln!("Error processing log file: {}", e);
+        process::exit(1);
     }
 }
