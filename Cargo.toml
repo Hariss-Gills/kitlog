@@ -5,3 +5,5 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.54", features = ["derive"] }
+regex = "1.12.2"
+strum = { version = "0.27.2", features = ["derive"] }
