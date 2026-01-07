@@ -20,24 +20,30 @@ jobs:
         include:
           - os: ubuntu-24.04
             target: x86_64-unknown-linux-musl
-            artifact_name: myapp-linux-x86_64
+            artifact_name: kitlog-linux-x86_64
+            bin_name: kitlog
           - os: ubuntu-24.04
             target: aarch64-unknown-linux-musl
-            artifact_name: myapp-linux-arm64
+            artifact_name: kitlog-linux-arm64
+            bin_name: kitlog
 
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: myapp-windows-x86_64.exe
+            artifact_name: kitlog-windows-x86_64.exe
+            bin_name: kitlog.exe
           - os: windows-latest
             target: aarch64-pc-windows-msvc
-            artifact_name: myapp-windows-arm64.exe
+            artifact_name: kitlog-windows-arm64.exe
+            bin_name: kitlog.exe
 
           - os: macos-latest
             target: x86_64-apple-darwin
-            artifact_name: myapp-macos-x86_64
+            artifact_name: kitlog-macos-x86_64
+            bin_name: kitlog
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: myapp-macos-arm64
+            artifact_name: kitlog-macos-arm64
+            bin_name: kitlog
 
     steps:
       - name: Checkout code
@@ -54,7 +60,7 @@ jobs:
       - name: Prepare Artifact
         shell: bash
         run: |
-          mv "target/${{ matrix.target }}/release/$BIN_NAME" "${{ matrix.artifact_name }}"
+          mv "target/${{ matrix.target }}/release/${{ matrix.bin_name }}" "${{ matrix.artifact_name }}"
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
