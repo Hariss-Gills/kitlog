@@ -13,11 +13,11 @@
 
 ## Overview
 
+We all like headers when rendering markdown. This project explores whether visual hierarchy belongs and to viewing logs.
+
 By using [Kitty’s OSC 66 text sizing protocol](https://sw.kovidgoyal.net/kitty/text-sizing-protocol/), kitlog turns plain terminal output into something closer to a semantic canvas. It's all still text, but much harder to miss or ignore when things ultimately go wrong.
 
 This makes logs much easier to scan…and usually much more annoying, because once errors or warnings start ranting and raving, they dominate your screen and your attention.
-
-We all like headers when rendering markdown. This project explores whether visual hierarchy belongs and to viewing logs.
 
 > [!NOTE]
 > This only works with any terminal emulators that support the text sizing protocol, which at the moment (I think) is only kitty.
