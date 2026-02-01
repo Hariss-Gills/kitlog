@@ -1,19 +1,29 @@
 use clap::Parser;
-use kitlog::process_log_file;
-use std::path;
+use clap_stdin::FileOrStdin;
+use kitlog::process_log;
 use std::process;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
-    path: path::PathBuf,
+    #[arg(value_name = "PATH", default_value = "-")]
+    /// Path to a log file
+    input: FileOrStdin,
 }
 
 fn main() {
     let args = Cli::parse();
 
-    if let Err(e) = process_log_file(&args.path) {
-        eprintln!("Error processing log file: {}", e);
-        process::exit(1);
+    match args.input.into_reader() {
+        Ok(reader) => {
+            if let Err(e) = process_log(reader) {
+                eprintln!("Error: {}", e);
+                process::exit(1);
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to open input: {}", e);
+            process::exit(1);
+        }
     }
 }

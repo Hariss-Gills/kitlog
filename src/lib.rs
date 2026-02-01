@@ -1,90 +1,163 @@
 use regex::Regex;
-use std::fs::File;
-use std::io::{self, BufRead, BufReader, BufWriter, Write};
-use std::path::Path;
-use std::str::FromStr;
-use strum::{Display, EnumIter, EnumString, IntoEnumIterator};
-#[derive(Debug, Clone, Copy, PartialEq, EnumIter, EnumString, Display)]
-#[strum(serialize_all = "lowercase")]
-pub enum LogLevel {
-    Error = 5,
-    Warn = 4,
-    Info = 3,
-    Debug = 2,
-    Trace = 1,
+use std::io::{self, BufRead, BufWriter, Read, Write};
+
+pub struct LogLine {
+    pub scaling: u8,
+    pub variant: &'static str,
+    pub color: &'static str,
 }
 
-impl LogLevel {
-    pub fn scaling(&self) -> u8 {
-        *self as u8
+impl LogLine {
+    pub fn format_header(&self, header: &str) -> String {
+        format!(
+            "\x1b[{}m\x1b]66;s={};{}\x07\x1b[0m", // Changed here
+            self.color, self.scaling, header
+        )
     }
 
-    pub fn build_regex_pattern() -> String {
-        let variants: Vec<String> = LogLevel::iter().map(|v| v.to_string()).collect();
-        format!(r"(?i)^.*?({}).*?\s", variants.join("|"))
-    }
-
-    pub fn parse_line(line: &str, re: &Regex) -> Option<(usize, LogLevel)> {
-        re.captures(line).and_then(|caps| {
-            let keyword = caps.get(1)?.as_str();
-            let level = LogLevel::from_str(&keyword.to_lowercase()).ok()?;
-            let full_match = caps.get(0)?;
-            Some((full_match.end(), level))
-        })
-    }
-
-    pub fn format_header(header: &str, level: LogLevel) -> String {
-        format!("\x1b]66;s={};{}\x07", level.scaling(), header)
-    }
-
-    pub fn format_message(message: &str, level: LogLevel) -> String {
-        let scale = level.scaling();
-        let chunk_size = scale as usize;
+    pub fn format_message(&self, message: &str) -> String {
+        let chunk_size = self.scaling as usize;
         let chars: Vec<char> = message.chars().collect();
 
         let mut result = String::new();
         for chunk in chars.chunks(chunk_size) {
             let chunk_str: String = chunk.iter().collect();
             result.push_str(&format!(
-                "\x1b]66;s={}:w=1:n=1:d={}:v=2;{}\x07",
-                scale, scale, chunk_str
+                "\x1b[{}m\x1b]66;s={}:w=1:n=1:d={}:v=2;{}\x07\x1b[0m",
+                self.color, self.scaling, self.scaling, chunk_str
             ));
         }
         result
     }
 
-    pub fn trailing_newlines(level: LogLevel) -> String {
-        let scale = level.scaling();
-        if scale > 1 {
-            "\n".repeat((scale) as usize)
-        } else {
-            String::new()
+    pub fn trailing_newlines(&self) -> String {
+        "\n".repeat(self.scaling as usize)
+    }
+}
+
+pub enum LogLevel {
+    Error { line: LogLine },
+    Warn { line: LogLine },
+    Info { line: LogLine },
+    Debug { line: LogLine },
+    Trace { line: LogLine },
+}
+
+impl LogLevel {
+    pub fn new_error() -> Self {
+        Self::Error {
+            line: LogLine {
+                scaling: 5,
+                variant: "error",
+                color: "1;31",
+            },
+        }
+    }
+    pub fn new_warn() -> Self {
+        Self::Warn {
+            line: LogLine {
+                scaling: 4,
+                variant: "warn",
+                color: "1;33",
+            },
+        }
+    }
+    pub fn new_info() -> Self {
+        Self::Info {
+            line: LogLine {
+                scaling: 3,
+                variant: "info",
+                color: "1;34",
+            },
+        }
+    }
+    pub fn new_debug() -> Self {
+        Self::Debug {
+            line: LogLine {
+                scaling: 2,
+                variant: "debug",
+                color: "1;32",
+            },
+        }
+    }
+    pub fn new_trace() -> Self {
+        Self::Trace {
+            line: LogLine {
+                scaling: 1,
+                variant: "trace",
+                color: "1;30",
+            },
+        }
+    }
+
+    pub fn get_log_line(&self) -> &LogLine {
+        match self {
+            Self::Error { line }
+            | Self::Warn { line }
+            | Self::Info { line }
+            | Self::Debug { line }
+            | Self::Trace { line } => line,
         }
     }
 }
 
-pub fn process_log_file<P: AsRef<Path>>(path: P) -> Result<(), Box<dyn std::error::Error>> {
-    let re = Regex::new(&LogLevel::build_regex_pattern())?;
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
+fn build_regex_pattern() -> String {
+    let variants = [
+        LogLevel::new_error().get_log_line().variant,
+        LogLevel::new_warn().get_log_line().variant,
+        LogLevel::new_info().get_log_line().variant,
+        LogLevel::new_debug().get_log_line().variant,
+        LogLevel::new_trace().get_log_line().variant,
+    ];
+
+    format!(r"(?i)^.*?({}).*?\s", variants.join("|"))
+}
+
+fn from_keyword(keyword: &str) -> Option<LogLevel> {
+    match keyword {
+        "error" => Some(LogLevel::new_error()),
+        "warn" => Some(LogLevel::new_warn()),
+        "info" => Some(LogLevel::new_info()),
+        "debug" => Some(LogLevel::new_debug()),
+        "trace" => Some(LogLevel::new_trace()),
+        _ => None,
+    }
+}
+
+fn parse_line(line: &str, re: &Regex) -> Option<(usize, LogLevel)> {
+    let caps = re.captures(line)?;
+    let keyword = caps.get(1)?.as_str().to_lowercase();
+    let full_match = caps.get(0)?;
+
+    let level = from_keyword(&keyword)?;
+    Some((full_match.end(), level))
+}
+
+pub fn process_log<R: Read>(reader: R) -> Result<(), Box<dyn std::error::Error>> {
+    let re = Regex::new(&build_regex_pattern())?;
+    let reader = io::BufReader::new(reader);
 
     let stdout = io::stdout();
     let mut handle = BufWriter::new(stdout.lock());
 
     for line_result in reader.lines() {
         let line = line_result?;
-        match LogLevel::parse_line(&line, &re) {
+        match parse_line(&line, &re) {
             Some((end, level)) => {
                 let header = line[..end].trim_end();
                 let message = line[end..].trim();
-                // Fast: Writing to memory buffer
-                write!(handle, "{}", LogLevel::format_header(header, level))?;
-                write!(handle, "{}", LogLevel::format_message(message, level))?;
-                write!(handle, "{}", LogLevel::trailing_newlines(level))?;
+                let log = level.get_log_line();
+
+                write!(handle, "{}", log.format_header(header))?;
+                write!(handle, "{}", log.format_message(message))?;
+                write!(handle, "{}", log.trailing_newlines())?;
             }
-            None => writeln!(handle, "{}", line)?,
+            None => {
+                writeln!(handle, "{}", line)?;
+            }
         }
     }
+
     handle.flush()?;
     Ok(())
 }
