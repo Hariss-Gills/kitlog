@@ -71,7 +71,6 @@ Options:
 
 ## Future Plans
 
-* Colors!
-* Use `stdin` as input
 * Add scaling values as arguments
 * Possible config file?
+* Multilang support?

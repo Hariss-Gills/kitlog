@@ -3,6 +3,7 @@ use clap_stdin::FileOrStdin;
 use kitlog::process_log;
 use std::process;
 
+/// A utility to parse and visually format logs.
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
