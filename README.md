@@ -21,6 +21,7 @@ This makes logs much easier to scan…and usually much more annoying, because on
 
 > [!NOTE]
 > This only works with any terminal emulators that support the text sizing protocol, which at the moment (I think) is only kitty.
+
 ---
 
 ## Supported Log Levels
@@ -44,12 +45,52 @@ The higher the scaling the larger the text renders.
 1. Reads logs line-by-line (streaming, no buffering the whole file)
 2. Uses a compiled regex to detect log level keywords
 3. Splits each matching line into:
+   - **Header** (timestamp / prefix)
+   - **Message body**
 
-   * **Header** (timestamp / prefix)
-   * **Message body**
 4. Emits Kitty `OSC 66` escape sequences to scale the output
 
 Lines without a recognized log level pass through unchanged.
+
+---
+
+## Configuration
+
+kitlog can be configured via a TOML config file. By default it looks in the standard config directory for your OS (e.g. `~/.config/kitlog/config.toml` on Linux). Use `-c, --config <PATH>` to specify a custom path.
+
+### Default Config
+
+```toml
+[levels.error]
+scaling = 5
+color = "1;31"
+keyword = "error"
+
+[levels.warn]
+scaling = 4
+color = "1;33"
+keyword = "warn"
+
+[levels.info]
+scaling = 3
+color = "1;34"
+keyword = "info"
+
+[levels.debug]
+scaling = 2
+color = "1;32"
+keyword = "debug"
+
+[levels.trace]
+scaling = 1
+color = "1;30"
+keyword = "trace"
+```
+
+Each level has:
+- **`scaling`** — text size multiplier (1–5)
+- **`color`** — ANSI color code (e.g. `"1;31"` for bold red)
+- **`keyword`** — the case-insensitive keyword detected in log lines
 
 ---
 
@@ -57,20 +98,15 @@ Lines without a recognized log level pass through unchanged.
 
 ```bash
 kitlog --help
-Usage: kitlog <PATH>
+A utility to parse and visually format logs
+
+Usage: kitlog [OPTIONS] [PATH]
 
 Arguments:
-  <PATH>  Path to a log file
+  [PATH]  Path to a log file [default: -]
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
+  -c, --config <CONFIG>  Optional Path to config file
+  -h, --help             Print help
+  -V, --version          Print version
 ```
-
----
-
-## Future Plans
-
-* Add scaling values as arguments
-* Possible config file?
-* Multilang support?
