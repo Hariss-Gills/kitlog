@@ -88,7 +88,8 @@ keyword = "trace"
 ```
 
 Each level has:
-- **`scaling`** — text size multiplier (1–5)
+
+- **`scaling`** — text size multiplier
 - **`color`** — ANSI color code (e.g. `"1;31"` for bold red)
 - **`keyword`** — the case-insensitive keyword detected in log lines
 
